@@ -1,0 +1,72 @@
+[tool.poetry]
+name = "recommendation-quiz-api"
+version = "0.1.0"
+description = "REST API for the recommendation quiz."
+authors = ["Sai Asish Y <saiasish.cnp@gmail.com>"]
+readme = "README.md"
+package-mode = false
+
+[tool.poetry.dependencies]
+python = ">=3.11,<3.14"
+django = "^5.1"
+djangorestframework = "^3.15"
+drf-spectacular = "^0.27"
+psycopg = {extras = ["binary"], version = "^3.2"}
+django-cors-headers = "^4.4"
+django-environ = "^0.11"
+gunicorn = "^23.0"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^8.3"
+pytest-django = "^4.9"
+pytest-cov = "^5.0"
+factory-boy = "^3.3"
+ruff = "^0.6"
+mypy = "^1.11"
+django-stubs = {extras = ["compatible-mypy"], version = "^5.1"}
+djangorestframework-stubs = {extras = ["compatible-mypy"], version = "^3.15"}
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "config.settings"
+python_files = ["test_*.py", "tests.py"]
+addopts = "--cov=apps --cov=config --cov-report=term-missing --cov-fail-under=80"
+filterwarnings = [
+    "ignore::DeprecationWarning",
+]
+
+[tool.coverage.run]
+omit = [
+    "*/migrations/*",
+    "*/tests/*",
+    "*/test_*.py",
+    "manage.py",
+    "config/asgi.py",
+    "config/wsgi.py",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+extend-exclude = ["migrations"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "N", "C4", "SIM"]
+ignore = ["E501"]
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+plugins = ["mypy_django_plugin.main", "mypy_drf_plugin.main"]
+exclude = ["migrations/", "tests/", "test_.*\\.py$"]
+disallow_untyped_decorators = false
+
+[tool.django-stubs]
+django_settings_module = "config.settings"
+
+[[tool.mypy.overrides]]
+module = ["factory.*", "factory_boy.*", "environ.*", "drf_spectacular.*"]
+ignore_missing_imports = true
