@@ -1,0 +1,42 @@
+name: Lighthouse
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 6 * * 1"  # weekly Monday 06:00 UTC
+
+# Note: Lighthouse perf scores on shared GitHub runners are not deterministic;
+# this workflow is informational only and does not gate merges. Numbers
+# fluctuate run-to-run.
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: pnpm
+          cache-dependency-path: apps/web/pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
+      - name: Serve and audit
+        run: |
+          npx --yes serve dist -l 4173 &
+          SERVER_PID=$!
+          sleep 3
+          npx --yes lighthouse http://127.0.0.1:4173 \
+            --output json --output-path ./lighthouse.json \
+            --chrome-flags="--headless --no-sandbox" || true
+          kill $SERVER_PID || true
+      - uses: actions/upload-artifact@v4
+        with:
+          name: lighthouse-report
+          path: apps/web/lighthouse.json
+          retention-days: 30
