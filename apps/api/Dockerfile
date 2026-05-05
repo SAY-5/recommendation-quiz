@@ -25,7 +25,7 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/* \
     && useradd --create-home --uid 10001 app
 WORKDIR /app
-COPY --from=builder /usr/local/lib/python${PYTHON_VERSION}/site-packages /usr/local/lib/python${PYTHON_VERSION}/site-packages
+COPY --from=builder /usr/local/lib /usr/local/lib
 COPY --from=builder /usr/local/bin /usr/local/bin
 COPY --chown=app:app . .
 USER app
