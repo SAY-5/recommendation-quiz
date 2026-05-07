@@ -21,6 +21,7 @@ pytest = "^8.3"
 pytest-django = "^4.9"
 pytest-cov = "^5.0"
 factory-boy = "^3.3"
+hypothesis = "^6.112"
 ruff = "^0.6"
 mypy = "^1.11"
 django-stubs = {extras = ["compatible-mypy"], version = "^5.1"}
@@ -33,7 +34,7 @@ build-backend = "poetry.core.masonry.api"
 [tool.pytest.ini_options]
 DJANGO_SETTINGS_MODULE = "config.settings"
 python_files = ["test_*.py", "tests.py"]
-addopts = "--cov=apps --cov=config --cov-report=term-missing --cov-fail-under=80"
+addopts = "--cov=apps --cov=config --cov-report=term-missing --cov-fail-under=85"
 filterwarnings = [
     "ignore::DeprecationWarning",
 ]

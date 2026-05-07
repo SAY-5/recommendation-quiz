@@ -27,4 +27,20 @@ describe("storage", () => {
     clearAnswers();
     expect(loadAnswers()).toEqual({});
   });
+
+  it("persists answers across simulated component remounts", () => {
+    // Mount 1: write answers and unmount (no in-memory state).
+    saveAnswers({ 1: "light", 2: ["fruity", "floral"], 3: "drip" });
+    // Mount 2: the new instance reads from storage and recovers state.
+    const recovered = loadAnswers();
+    expect(recovered).toEqual({ 1: "light", 2: ["fruity", "floral"], 3: "drip" });
+    // Mutate and remount again — partial updates round-trip.
+    saveAnswers({ ...recovered, 4: "espresso" });
+    expect(loadAnswers()).toEqual({
+      1: "light",
+      2: ["fruity", "floral"],
+      3: "drip",
+      4: "espresso",
+    });
+  });
 });
