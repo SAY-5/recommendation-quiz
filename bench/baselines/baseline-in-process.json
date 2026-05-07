@@ -1,0 +1,18 @@
+{
+  "started_at": "2026-05-07T20:09:03.265357+00:00",
+  "duration_s": 16.518,
+  "users": 1,
+  "base_url": "in-process",
+  "mode": "in-process",
+  "requests": 5000,
+  "errors": 0,
+  "throughput_rps": 302.71,
+  "p50_ms": 2.95,
+  "p95_ms": 5.27,
+  "p99_ms": 6.43,
+  "mean_ms": 3.25,
+  "queries_per_request": 1.8,
+  "server_score_p95_ms": null,
+  "samples": 5000,
+  "notes": []
+}

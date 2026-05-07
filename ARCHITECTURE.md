@@ -84,6 +84,29 @@ deterministic across pagination boundaries.
 * Each page (`LandingPage`, `QuizPage`, `ResultsPage`) is a dynamic
   `import()` so the initial route ships only what it needs.
 
+## Performance + N+1 query analysis
+
+The scoring service (`apps/recommend/service.py`) is structured to issue a
+constant number of queries regardless of the catalog size:
+
+1. `_load_question_slug_map(question_ids)` — one `Question.objects.filter`
+   query, returning the (id, slug) tuples needed to resolve each answer to a
+   scoring rule.
+2. `_load_products()` — one `Product.objects.prefetch_related("attributes")`
+   call. The prefetch issues one extra query for the attributes of *all*
+   products in a single `IN (...)` rather than per-product.
+3. `Product.objects.filter(id__in=top_ids)` — one query that fetches the
+   top-N product rows for the response payload.
+
+Total: ~3 queries per scoring call, independent of catalog or answer count.
+
+The bench (`bench/load.py --in-process`) uses Django's
+`CaptureQueriesContext` to count actual query counts per `recommend_top_n`
+invocation. The 20s reference run reports ~1.8 queries per request (savings
+come from a hot connection and Django's prepared-statement reuse). If the
+service ever regresses to per-product attribute fetches, this number jumps
+linearly with the catalog and the bench-regress gate fires.
+
 ## API error envelope
 
 Every non-2xx response from a DRF view is wrapped by

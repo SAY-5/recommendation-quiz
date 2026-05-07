@@ -67,10 +67,48 @@ make typecheck  # mypy + tsc
 make e2e        # Playwright cross-browser
 ```
 
-Backend coverage gate: 80% (currently ~95%). Each pytest run prints the table.
+Backend coverage gate: 85% (currently ~95%). Each pytest run prints the table.
+Frontend coverage gate: 75% over `src/components` and `src/lib`; pages are
+exercised end-to-end via Playwright.
+
+The backend test suite includes Hypothesis property tests
+(`tests/test_scoring_properties.py`) that assert score-bound, subset-
+monotonicity, and hard-incompatibility invariants over randomly generated
+answer-and-product combinations.
 
 End-to-end suite stubs the API at the network layer (Playwright `route`
 handlers), so it runs hermetically — no live backend required.
+
+## Bench
+
+```bash
+make bench           # 30s in-process load against the scoring service
+make bench-regress   # bench + compare to bench/baselines/baseline-in-process.json
+```
+
+The bench writes a JSON record to `bench/results/` per run. Reference numbers
+from a 20s in-process run on a 2024 M-series laptop, sqlite-backed:
+
+| metric              | value      |
+| ------------------- | ---------- |
+| throughput          | 302.71 rps |
+| latency mean        | 3.25 ms    |
+| latency p50         | 2.95 ms    |
+| latency p95         | 5.27 ms    |
+| latency p99         | 6.43 ms    |
+| queries per request | 1.8        |
+
+Queries-per-request below ~4 confirms the scorer pulls products in a single
+prefetched query (`Product.objects.prefetch_related("attributes")`) rather
+than per-product. The bench uses Django's `CaptureQueriesContext` to count
+queries on each ``recommend_top_n`` call. Baseline lives at
+``bench/baselines/baseline-in-process.json``; the CI ``bench-api`` job runs a
+30 s scaled-down bench and fails on ≥ 50 % throughput drop or ≥ 2× p95 growth.
+
+`bench/load.py --in-process` drives the scoring service directly and counts
+queries; `bench/load.py` (default) hits a running API at ``--base-url`` with
+``--users`` async clients via ``httpx`` and is what you'd run against a
+deployed environment.
 
 ## Mobile performance
 

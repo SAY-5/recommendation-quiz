@@ -1,4 +1,4 @@
-.PHONY: help install dev migrate seed test lint typecheck e2e build clean api-shell web-shell docker-up docker-down
+.PHONY: help install dev migrate seed test lint typecheck e2e build clean api-shell web-shell docker-up docker-down bench bench-regress
 
 help:
 	@echo "Targets:"
@@ -13,6 +13,8 @@ help:
 	@echo "  build       docker buildx for api and web"
 	@echo "  docker-up   docker compose up -d"
 	@echo "  docker-down docker compose down -v"
+	@echo "  bench       in-process scoring load bench (no server required)"
+	@echo "  bench-regress  bench + compare against bench/baselines/baseline-in-process.json"
 
 install:
 	cd apps/api && poetry install --no-root
@@ -58,3 +60,16 @@ docker-down:
 clean:
 	rm -rf apps/web/node_modules apps/web/dist apps/web/.vite
 	rm -rf apps/api/.venv apps/api/.pytest_cache apps/api/.mypy_cache apps/api/.ruff_cache
+
+# Default: 30 second in-process bench. Override via BENCH_DURATION / BENCH_USERS.
+BENCH_DURATION ?= 30
+BENCH_MAX_ITERS ?= 5000
+
+bench:
+	cd apps/api && poetry run python ../../bench/load.py \
+		--in-process --duration $(BENCH_DURATION) --max-iters $(BENCH_MAX_ITERS)
+
+bench-regress:
+	cd apps/api && poetry run python ../../bench/load.py \
+		--in-process --duration $(BENCH_DURATION) --max-iters $(BENCH_MAX_ITERS) \
+		--baseline ../../bench/baselines/baseline-in-process.json

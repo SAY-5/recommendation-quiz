@@ -82,6 +82,58 @@ jobs:
       - name: Run pytest with coverage gate
         run: poetry run pytest
 
+  bench-api:
+    name: bench api (load + regress)
+    runs-on: ubuntu-latest
+    needs: [test-api]
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: recommendation_quiz
+          POSTGRES_USER: quiz
+          POSTGRES_PASSWORD: quiz
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U quiz -d recommendation_quiz"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgres://quiz:quiz@localhost:5432/recommendation_quiz
+      DJANGO_SECRET_KEY: ci-only-not-secret
+      DJANGO_DEBUG: "0"
+      DJANGO_ALLOWED_HOSTS: "*"
+    defaults:
+      run:
+        working-directory: apps/api
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install poetry
+        run: pipx install poetry==2.1.3
+      - name: Install dependencies
+        run: poetry install --no-root
+      - name: Apply migrations
+        run: poetry run python manage.py migrate
+      - name: Seed catalog
+        run: poetry run python manage.py seed_catalog
+      - name: Run bench-regress (small scale, 30s)
+        run: |
+          poetry run python ../../bench/load.py \
+            --in-process --duration 30 --max-iters 4000 \
+            --baseline ../../bench/baselines/baseline-in-process.json
+      - name: Upload bench artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: bench-results
+          path: bench/results
+          retention-days: 14
+
   lint-web:
     name: lint web (eslint + prettier)
     runs-on: ubuntu-latest
