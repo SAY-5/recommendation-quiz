@@ -39,10 +39,20 @@ class ProductBriefSerializer(serializers.Serializer[dict[str, Any]]):
     image_url = serializers.URLField(allow_blank=True)
 
 
+class QuestionContributionSerializer(serializers.Serializer[dict[str, Any]]):
+    question_id = serializers.IntegerField()
+    question_prompt = serializers.CharField()
+    user_answer = serializers.JSONField()
+    contribution_pts = serializers.FloatField()
+    max_contribution_pts = serializers.FloatField()
+    why = serializers.CharField()
+
+
 class RecommendationSerializer(serializers.Serializer[dict[str, Any]]):
     product = ProductBriefSerializer()
     score = serializers.FloatField()
     reasons = serializers.ListField(child=serializers.CharField())
+    breakdown = QuestionContributionSerializer(many=True, required=False)
 
 
 class ScoreResponseSerializer(serializers.Serializer[dict[str, Any]]):

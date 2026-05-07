@@ -107,6 +107,53 @@ come from a hot connection and Django's prepared-statement reuse). If the
 service ever regresses to per-product attribute fetches, this number jumps
 linearly with the catalog and the bench-regress gate fires.
 
+## Per-recommendation contribution breakdown
+
+The score endpoint returns each recommendation as
+
+```json
+{
+  "product": {...},
+  "score": 7.0,
+  "reasons": ["matches your brew method", ...],
+  "breakdown": [
+    {
+      "question_id": 1,
+      "question_prompt": "Which roast level do you usually reach for?",
+      "user_answer": "light",
+      "contribution_pts": 2.0,
+      "max_contribution_pts": 2.0,
+      "why": "full match on roast level"
+    },
+    ...
+  ]
+}
+```
+
+`breakdown` is the v4 addition. It decomposes the total score into one entry
+per answered question with three fields the UI uses:
+
+* `contribution_pts` — how much this question contributed to the product's
+  score given the user's answer.
+* `max_contribution_pts` — the upper bound (full match given the rule's
+  weight × any active variant override).
+* `why` — a one-line human explanation: "full match on …", "partial match
+  on … (1.0/2.0)", or "no match on …".
+
+The sum of `contribution_pts` across all entries equals the recommendation's
+`score` within float tolerance — see `tests/test_breakdown.py` for the
+sum-equals-total invariant test.
+
+The previous flat `reasons` array stays in the response for back-compat with
+v1 clients. New clients should prefer `breakdown` because it conveys the
+unmatched questions too (`reasons` only listed positive contributions).
+
+The frontend `ProductCard` renders `breakdown` as a collapsible "Why this
+match?" section. Each question becomes a row with the prompt, the user's
+answer, a horizontal progress bar showing `contribution / max`, and the
+`why` string. Below 640 px viewport the section starts collapsed to avoid
+crowding the card; ≥ 640 px it starts open.
+
 ## A/B testing scoring variants
 
 The scorer accepts a ``VariantConfig`` overlay so the same answer set can be

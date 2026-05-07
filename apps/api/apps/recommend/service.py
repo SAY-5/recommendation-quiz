@@ -76,6 +76,11 @@ def recommend_top_n(
         return []
 
     product_index = {p.id: p for p in Product.objects.filter(id__in=[s.product_id for s in top])}
+    # Resolve question prompts once for the breakdown payload.
+    qids = [c.question_id for s in top for c in s.breakdown]
+    prompt_by_id: dict[int, str] = (
+        dict(Question.objects.filter(id__in=qids).values_list("id", "prompt")) if qids else {}
+    )
     out: list[dict[str, Any]] = []
     for s in top:
         product = product_index.get(s.product_id)
@@ -91,7 +96,20 @@ def recommend_top_n(
                     "image_url": product.image_url,
                 },
                 "score": s.score,
+                # ``reasons`` is the v1 flat-list shape; kept for back-compat.
                 "reasons": s.reasons,
+                # ``breakdown`` is the v4 per-question contribution list.
+                "breakdown": [
+                    {
+                        "question_id": c.question_id,
+                        "question_prompt": prompt_by_id.get(c.question_id, c.question_slug),
+                        "user_answer": c.user_answer,
+                        "contribution_pts": c.contribution_pts,
+                        "max_contribution_pts": c.max_contribution_pts,
+                        "why": c.why,
+                    }
+                    for c in s.breakdown
+                ],
             }
         )
     if persist and variant is not None:

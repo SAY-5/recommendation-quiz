@@ -243,10 +243,24 @@ def match_score(rule: AttributeRule, target: Any, value: Any) -> float:
 
 
 @dataclass
+class QuestionContribution:
+    question_id: int
+    question_slug: str
+    user_answer: Any
+    contribution_pts: float
+    max_contribution_pts: float
+    why: str
+
+
+@dataclass
 class ScoredProduct:
     product_id: int
     score: float
     reasons: list[str]
+    # Per-question contributions: how much each answer contributed to the
+    # product's total score, plus the maximum it *could* have contributed.
+    # The frontend renders this as a horizontal bar per question.
+    breakdown: list[QuestionContribution] = field(default_factory=list)
 
 
 @dataclass(frozen=True)
@@ -297,6 +311,7 @@ def score_products(
     for product in products:
         attrs: dict[str, Any] = product.get("attributes", {})
         contributions: list[tuple[float, str]] = []
+        breakdown: list[QuestionContribution] = []
         total = 0.0
         is_hard_fail = False
         for answer in answers:
@@ -305,16 +320,34 @@ def score_products(
             if slug is None:
                 continue
             rules = QUESTION_TO_ATTRIBUTES.get(slug, [])
+            slug_contribution = 0.0
+            slug_max = 0.0
             slug_match = 0.0
+            top_label = ""
             for rule in rules:
                 value = attrs.get(rule.attribute_key)
                 effective_weight = rule.weight * overrides.get(slug, 1.0)
                 m = match_score(rule, answer["value"], value)
                 contribution = effective_weight * m
                 slug_match += m
+                slug_contribution += contribution
+                slug_max += effective_weight
                 if contribution > 0:
                     contributions.append((contribution, rule.label or rule.attribute_key))
+                    if not top_label:
+                        top_label = rule.label or rule.attribute_key
                 total += contribution
+            why = _explain(slug, top_label, slug_contribution, slug_max)
+            breakdown.append(
+                QuestionContribution(
+                    question_id=qid,
+                    question_slug=slug,
+                    user_answer=answer["value"],
+                    contribution_pts=round(slug_contribution, 4),
+                    max_contribution_pts=round(slug_max, 4),
+                    why=why,
+                )
+            )
             if slug in hard_fail and slug_match == 0.0:
                 is_hard_fail = True
         contributions.sort(key=lambda pair: pair[0], reverse=True)
@@ -325,8 +358,22 @@ def score_products(
                 product_id=int(product["id"]),
                 score=final_score,
                 reasons=[] if is_hard_fail else reasons,
+                breakdown=breakdown,
             )
         )
 
     results.sort(key=lambda r: (-r.score, r.product_id))
     return results
+
+
+def _explain(slug: str, label: str, points: float, max_points: float) -> str:
+    """Render a one-line human explanation for a question's contribution."""
+    if max_points <= 0:
+        return f"no rule contributes for '{slug}'"
+    pretty_label = label or slug.replace("_", " ")
+    if points <= 0:
+        return f"no match on {pretty_label}"
+    pct = points / max_points
+    if pct >= 0.999:
+        return f"full match on {pretty_label}"
+    return f"partial match on {pretty_label} ({points:.1f}/{max_points:.1f})"

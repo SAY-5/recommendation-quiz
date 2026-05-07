@@ -27,10 +27,21 @@ export interface ProductBrief {
   image_url: string;
 }
 
+export interface QuestionContribution {
+  question_id: number;
+  question_prompt: string;
+  user_answer: AnswerValue;
+  contribution_pts: number;
+  max_contribution_pts: number;
+  why: string;
+}
+
 export interface Recommendation {
   product: ProductBrief;
   score: number;
   reasons: string[];
+  // v4 addition; optional so old API responses still type-check.
+  breakdown?: QuestionContribution[];
 }
 
 export interface ScoreResponse {

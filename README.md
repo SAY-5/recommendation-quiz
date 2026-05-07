@@ -53,7 +53,7 @@ Swagger UI at `http://localhost:8000/api/docs/`.
 | Method | Path | Description |
 |---|---|---|
 | `GET` | `/api/quiz/questions` | Full ordered list of questions and options. |
-| `POST` | `/api/quiz/score?variant=<name>` | Score an answer set, return top-3 products. Optional `variant` selects an A/B scoring configuration; persists the submission when a variant resolves. |
+| `POST` | `/api/quiz/score?variant=<name>` | Score an answer set, return top-3 products. Optional `variant` selects an A/B scoring configuration; persists the submission when a variant resolves. The response includes both the v1 `reasons` array (back-compat) and the v4 `breakdown` array (per-question contribution decomposition). |
 | `GET` | `/api/products/{id}` | Product detail with all attributes. |
 | `GET` | `/api/admin/variants` | Admin: list scoring variants. |
 | `POST` | `/api/admin/variants` | Admin: create or update a variant. |
