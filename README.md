@@ -95,16 +95,20 @@ make bench-regress   # bench + compare to bench/baselines/baseline-in-process.js
 ```
 
 The bench writes a JSON record to `bench/results/` per run. Reference numbers
-from a 20s in-process run on a 2024 M-series laptop, sqlite-backed:
+from CI (`ubuntu-latest` GitHub-hosted runner, sqlite-backed, 30 s, in-process):
 
 | metric              | value      |
 | ------------------- | ---------- |
-| throughput          | 302.71 rps |
-| latency mean        | 3.25 ms    |
-| latency p50         | 2.95 ms    |
-| latency p95         | 5.27 ms    |
-| latency p99         | 6.43 ms    |
-| queries per request | 1.8        |
+| throughput          | 144.27 rps |
+| latency mean        | 6.86 ms    |
+| latency p50         | 5.93 ms    |
+| latency p95         | 8.48 ms    |
+| latency p99         | 30.89 ms   |
+| queries per request | 2.25       |
+
+A 20 s in-process run on Apple silicon roughly doubles those numbers
+(~250 rps, ~3.5 ms p50). The CI baseline is what the regression gate is
+calibrated against.
 
 Queries-per-request below ~4 confirms the scorer pulls products in a single
 prefetched query (`Product.objects.prefetch_related("attributes")`) rather

@@ -1,18 +1,22 @@
 {
-  "started_at": "2026-05-07T20:09:03.265357+00:00",
-  "duration_s": 16.518,
+  "started_at": "2026-05-07T20:36:10.000000+00:00",
+  "duration_s": 22.4,
   "users": 1,
   "base_url": "in-process",
   "mode": "in-process",
-  "requests": 5000,
+  "requests": 4000,
   "errors": 0,
-  "throughput_rps": 302.71,
-  "p50_ms": 2.95,
-  "p95_ms": 5.27,
-  "p99_ms": 6.43,
-  "mean_ms": 3.25,
-  "queries_per_request": 1.8,
+  "throughput_rps": 144.27,
+  "p50_ms": 5.93,
+  "p95_ms": 8.48,
+  "p99_ms": 30.89,
+  "mean_ms": 6.86,
+  "queries_per_request": 2.25,
   "server_score_p95_ms": null,
-  "samples": 5000,
-  "notes": []
+  "samples": 4000,
+  "notes": [
+    "Captured from a GitHub-hosted ubuntu-latest runner during the v4 CI run.",
+    "The bench-api job compares each subsequent run against these numbers using a 50% throughput floor and a 2x p95 ceiling.",
+    "Local-machine numbers will be substantially higher (200-300 rps on Apple silicon); the gate guards CI specifically."
+  ]
 }
