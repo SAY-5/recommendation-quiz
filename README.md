@@ -53,8 +53,16 @@ Swagger UI at `http://localhost:8000/api/docs/`.
 | Method | Path | Description |
 |---|---|---|
 | `GET` | `/api/quiz/questions` | Full ordered list of questions and options. |
-| `POST` | `/api/quiz/score` | Score an answer set, return top-3 products with reasons. |
+| `POST` | `/api/quiz/score?variant=<name>` | Score an answer set, return top-3 products. Optional `variant` selects an A/B scoring configuration; persists the submission when a variant resolves. |
 | `GET` | `/api/products/{id}` | Product detail with all attributes. |
+| `GET` | `/api/admin/variants` | Admin: list scoring variants. |
+| `POST` | `/api/admin/variants` | Admin: create or update a variant. |
+| `GET` | `/api/admin/variants/{id}/results?cursor=…&page_size=…` | Admin: cursor-paginated submissions for a variant. |
+| `GET` | `/api/admin/variants/compare?a=<id>&b=<id>` | Admin: side-by-side aggregates and shared-session score gap. |
+
+Admin endpoints are token-gated. Set `ADMIN_API_TOKEN` in the environment and
+include `Authorization: Bearer <token>` on every admin request. If the env
+var is unset, all admin endpoints return 403.
 
 Errors use a consistent envelope: `{ code, message, retryable, request_id }`.
 
