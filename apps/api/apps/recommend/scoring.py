@@ -25,7 +25,7 @@ to perform (exact, set-membership, ordinal, range).
 """
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any, Literal
 
 # ----------------------------------------------------------------------------
@@ -249,10 +249,28 @@ class ScoredProduct:
     reasons: list[str]
 
 
+@dataclass(frozen=True)
+class VariantConfig:
+    """Per-call scoring configuration applied as overlays to the defaults.
+
+    * ``weight_overrides`` — slug → weight multiplier applied to every rule
+      whose source slug matches. A weight of ``2.0`` for ``flavor_profile``
+      doubles every flavor-profile rule's weight on this scoring run.
+    * ``hard_fail_slugs`` — if any rule keyed off these slugs returns 0.0,
+      the product's total score is forced to 0.0. Used for hard rejects
+      (e.g. "drop products that exceed budget" rather than partial credit).
+    """
+
+    name: str = "default"
+    weight_overrides: dict[str, float] = field(default_factory=dict)
+    hard_fail_slugs: tuple[str, ...] = ()
+
+
 def score_products(
     answers: list[dict[str, Any]],
     products: list[dict[str, Any]],
     question_slug_by_id: dict[int, str],
+    variant: VariantConfig | None = None,
 ) -> list[ScoredProduct]:
     """Score every product against the supplied answers.
 
@@ -264,35 +282,49 @@ def score_products(
         ``[{"id": int, "attributes": {key: value}}]``.
     question_slug_by_id
         Maps ``question_id`` to its slug, which is used to look up the rules.
+    variant
+        Optional ``VariantConfig`` providing weight overrides and hard-fail
+        slugs. ``None`` is equivalent to the default configuration.
 
     Returns
     -------
     A list of ``ScoredProduct`` sorted by descending score, then ascending id.
     """
+    cfg = variant or VariantConfig()
+    overrides = cfg.weight_overrides
+    hard_fail = set(cfg.hard_fail_slugs)
     results: list[ScoredProduct] = []
     for product in products:
         attrs: dict[str, Any] = product.get("attributes", {})
         contributions: list[tuple[float, str]] = []
         total = 0.0
+        is_hard_fail = False
         for answer in answers:
             qid = int(answer["question_id"])
             slug = question_slug_by_id.get(qid)
             if slug is None:
                 continue
             rules = QUESTION_TO_ATTRIBUTES.get(slug, [])
+            slug_match = 0.0
             for rule in rules:
                 value = attrs.get(rule.attribute_key)
-                contribution = rule.weight * match_score(rule, answer["value"], value)
+                effective_weight = rule.weight * overrides.get(slug, 1.0)
+                m = match_score(rule, answer["value"], value)
+                contribution = effective_weight * m
+                slug_match += m
                 if contribution > 0:
                     contributions.append((contribution, rule.label or rule.attribute_key))
                 total += contribution
+            if slug in hard_fail and slug_match == 0.0:
+                is_hard_fail = True
         contributions.sort(key=lambda pair: pair[0], reverse=True)
         reasons = [f"matches your {label}" for _, label in contributions[:3]]
+        final_score = 0.0 if is_hard_fail else round(total, 4)
         results.append(
             ScoredProduct(
                 product_id=int(product["id"]),
-                score=round(total, 4),
-                reasons=reasons,
+                score=final_score,
+                reasons=[] if is_hard_fail else reasons,
             )
         )
 

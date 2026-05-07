@@ -107,6 +107,36 @@ come from a hot connection and Django's prepared-statement reuse). If the
 service ever regresses to per-product attribute fetches, this number jumps
 linearly with the catalog and the bench-regress gate fires.
 
+## A/B testing scoring variants
+
+The scorer accepts a ``VariantConfig`` overlay so the same answer set can be
+scored multiple ways without forking the engine. A variant declares two things:
+
+* ``weight_overrides``: ``{slug: multiplier}`` applied to every rule whose
+  question slug matches. ``{"flavor_profile": 2.0}`` doubles the weight of
+  every flavor-profile rule.
+* ``hard_fail_slugs``: list of question slugs whose mismatch should collapse
+  the product score to 0 instead of accumulating partial credit. Used to
+  express "drop products that don't satisfy this constraint" rather than
+  "lower their score".
+
+Variants are persisted in the ``ScoringVariant`` table (one row per named
+configuration) and selected per request via ``?variant=<name>`` on
+``POST /api/quiz/score``. Submissions are persisted to ``QuizSubmission``
+with their answer set, the recommendations they received, and the variant
+used. The optional ``X-Session-Id`` request header is recorded too — that
+allows offline analysis to compare how the *same user* scored under two
+variants without rolling out a full session/account system.
+
+The seed command creates three reference variants:
+
+* ``default`` — current weights, no overrides.
+* ``flavor_heavy`` — boosts flavor-profile match weight 2×.
+* ``budget_strict`` — hard-fails on budget mismatch.
+
+Adding a new variant is a single ``POST`` to ``/api/admin/variants`` with a
+weights JSON object; no code changes required.
+
 ## API error envelope
 
 Every non-2xx response from a DRF view is wrapped by

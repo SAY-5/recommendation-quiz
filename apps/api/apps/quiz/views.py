@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from drf_spectacular.utils import OpenApiResponse, extend_schema
+from drf_spectacular.utils import OpenApiParameter, OpenApiResponse, extend_schema
 from rest_framework import status
 from rest_framework.request import Request
 from rest_framework.response import Response
@@ -41,11 +41,27 @@ class ScoreView(APIView):
             200: ScoreResponseSerializer,
             400: OpenApiResponse(description="Validation error envelope."),
         },
+        parameters=[
+            OpenApiParameter(
+                name="variant",
+                description="Scoring variant name; falls back to 'default'.",
+                required=False,
+                type=str,
+            ),
+        ],
         description="Compute weighted-attribute scores and return the top-3 recommendations.",
     )
     def post(self, request: Request) -> Response:
         serializer = ScoreRequestSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         answers: list[dict[str, Any]] = serializer.validated_data["answers"]
-        recommendations = recommend_top_n(answers, top_n=3)
+        variant = request.query_params.get("variant")
+        session_id = request.headers.get("X-Session-Id", "")
+        recommendations = recommend_top_n(
+            answers,
+            top_n=3,
+            variant_name=variant,
+            persist=True,
+            session_id=session_id,
+        )
         return Response({"recommendations": recommendations}, status=status.HTTP_200_OK)

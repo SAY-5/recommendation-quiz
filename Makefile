@@ -25,6 +25,7 @@ migrate:
 
 seed:
 	cd apps/api && poetry run python manage.py seed_catalog
+	cd apps/api && poetry run python manage.py seed_variants
 
 dev:
 	@echo "Run 'make docker-up' for postgres, then in two shells:"
